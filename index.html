@@ -219,6 +219,19 @@ const ITEMS = [
   { id: 'cold', name: '차가운 밀랍', desc: '맞은 적이 잠시 느려집니다', icon: 'snow', col: '#9fe0ff', apply: p => { p.slow = true; } },
   { id: 'seal', name: '봉랍 인장', desc: '방마다 첫 피해 1번을 막습니다', icon: 'shield', col: '#e0525a', apply: p => { p.seal++; p.sealUp = true; } },
   { id: 'holder', name: '무쇠 촛대 받침', desc: '최대 체력 +2, 이동 속도 감소', icon: 'shield', col: '#9a9aa8', apply: p => { p.maxHp += 4; p.hp += 4; p.speed = Math.max(100, p.speed - 15); } },
+  // mechanic items (v0.4)
+  { id: 'trail', name: '불의 발자국', desc: '지나간 자리에 잠시 불이 남아 적을 태웁니다', icon: 'flame', col: '#ff7a2a', apply: p => { p.trail = true; } },
+  { id: 'bounce', name: '반사 유리', desc: '불꽃이 벽이나 바위에 한 번 튕깁니다', icon: 'diamond', col: '#a8e0ff', apply: p => { p.bounce = true; } },
+  { id: 'chain', name: '옮겨붙는 불', desc: '적을 처치하면 가까운 적 둘에게 불씨가 튑니다', icon: 'split', col: '#ffb020', apply: p => { p.chain = true; } },
+  { id: 'regen', name: '촛불 심장', desc: '방을 비울 때마다 체력 반 칸 회복', icon: 'heart', col: '#ffb3a0', apply: p => { p.regen = true; } },
+  { id: 'lucky', name: '행운의 심지', desc: '동전을 주울 때 1닢 더', icon: 'coin', col: '#f2d98a', apply: p => { p.coinPlus = (p.coinPlus || 0) + 1; } },
+  { id: 'spare', name: '여분의 심지', desc: '불이 꺼지면 한 번, 체력 한 칸으로 다시 켜집니다', icon: 'bar', col: '#fff6e0', apply: p => { p.lives = (p.lives || 0) + 1; } },
+  { id: 'sharp', name: '날카로운 불씨', desc: '12% 확률로 3배 피해 (치명타)', icon: 'needle', col: '#ffffff', apply: p => { p.crit = (p.crit || 0) + 0.12; } },
+  { id: 'grow', name: '자라나는 불꽃', desc: '불꽃이 멀리 날아갈수록 커지고 강해집니다', icon: 'orb', col: '#ffcf6a', apply: p => { p.grow = true; } },
+  { id: 'static', name: '정전기 털', desc: '맞으면 주변 적에게 피해를 주고 탄을 지웁니다', icon: 'snow', col: '#e0e8ff', apply: p => { p.static = true; } },
+  { id: 'glove', name: '그을린 장갑', desc: '폭발 피해를 받지 않습니다', icon: 'shield', col: '#8a6a50', apply: p => { p.blastProof = true; } },
+  { id: 'armor', name: '밀랍 갑옷', desc: '한 칸 이상의 피해를 반 칸 줄여 줍니다', icon: 'shield', col: '#d8c8a6', apply: p => { p.armor = true; } },
+  { id: 'eyes', name: '올빼미 눈', desc: '어둠 속 적의 윤곽이 보입니다', icon: 'ring', col: '#c6ff7a', apply: p => { p.seer = true; } },
   // trade-off items: a clear upside paired with a clear downside
   { id: 'glass', name: '유리 촛대', desc: '공격력 ×1.8 / 최대 체력 −1칸', icon: 'diamond', col: '#bfe8ff', apply: p => { p.dmgMul *= 1.8; p.maxHp = Math.max(2, p.maxHp - 2); p.hp = Math.min(p.hp, p.maxHp); } },
   { id: 'thin', name: '가는 심지', desc: '연사 속도 ×1.7 / 공격력 ×0.6', icon: 'needle', col: '#ffe08a', apply: p => { p.fireDelay /= 1.7; p.dmgMul *= 0.6; } },
@@ -274,6 +287,12 @@ const REROLL = { id: 'reroll', active: true, name: '밀랍 주사위', desc: '�
     }
     if (!any) return false;
   } };
+ACTIVES.push(
+  { id: 'hourglass', active: true, name: '밀랍 모래시계', desc: '3초간 적과 적의 탄이 멈춥니다', icon: 'diamond', col: '#e8d7a8', charge: 3, use: () => { freezeT = 3; flashes.push({ x: P.x, y: P.y, r: 600, t: 0.3 }); } },
+  { id: 'megabomb', active: true, name: '거대 화약통', desc: '큰 폭탄을 설치합니다 (넓은 범위, 큰 피해)', icon: 'orb', col: '#ff6a3d', charge: 3, use: () => { bombs.push({ x: P.x, y: P.y, t: 1.6, big: true }); } },
+  { id: 'bell', active: true, name: '상인의 종', desc: '동전 6닢을 얻습니다', icon: 'coin', col: '#f2d98a', charge: 3, use: () => { P.coins = Math.min(99, P.coins + 6); } },
+  { id: 'candlewall', active: true, name: '촛불 장막', desc: '5초간 주위를 도는 불씨 4개가 생깁니다', icon: 'ring', col: '#ff9b3d', charge: 2, use: () => { P.tempOrbT = 5; } },
+);
 const itemDesc = it => it.active ? `액티브(Space) · 충전 ${it.charge}칸 · ${it.desc}` : it.desc;
 // pickup drop mix: coin 45% (1 in 10 coins is a 5-coin), heart 30%, bomb 25%
 // room-clear rewards use bomb:heart:coin = 2:3:5
@@ -319,6 +338,7 @@ function setDiff(d) {
 let roomPlan = [0, 12, 13, 15, 16, 18, 19];
 let floorN = 1, rooms = {}, cur = null, P = null;
 let enemies = [], tears = [], eBullets = [], bombs = [], particles = [], pool = [];
+let freezeT = 0, fires = [];
 let shake = 0, transT = 0, runTime = 0, kills = 0, winT = 0, gameT = 0;
 
 function newPlayer() {
@@ -536,7 +556,7 @@ function startFloor() {
 function enterRoom(room, door) {
   cur = room; room.visited = true; room.seen = true;
   for (const d of room.doors) d.to.seen = true;
-  tears = []; eBullets = []; bombs = []; particles = []; enemies = [];
+  tears = []; eBullets = []; bombs = []; particles = []; enemies = []; fires = []; freezeT = 0;
   P.sealUp = P.seal > 0;
   if (!room.cleared) { for (const s of room.spawns) { const en = makeEnemy(s.type, s.x, s.y); if (s.elite) makeElite(en); enemies.push(en); } sfx('door'); }
   if (door) {
@@ -753,7 +773,7 @@ function enemyBlast(x, y) {
   const R = 62; sfx('boom'); shake = Math.max(shake, 7); flashes.push({ x, y, r: 170, t: 0.3 });
   particles.push({ x, y, vx: 0, vy: 0, life: 0.3, max: 0.3, col: '#ffd0a0', size: R, ring: true, glow: true });
   for (let i = 0; i < 16; i++) { const a = rnd() * TAU, sp = 60 + rnd() * 160; particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.45, max: 0.45, col: i % 2 ? '#ff9b3d' : '#ffe1a8', size: 3, glow: true }); }
-  if (Math.hypot(P.x - x, P.y - y) < R + P.r - 4) hurt(2);
+  if (!P.blastProof && Math.hypot(P.x - x, P.y - y) < R + P.r - 4) hurt(2);
   for (const o of enemies) if (o.hp > 0 && o.spawnT <= 0 && Math.hypot(o.x - x, o.y - y) < R + o.r) damageEnemy(o, 10, o.x - x, o.y - y);
   for (let r = 1; r < cur.rows - 1; r++) for (let c = 1; c < cur.cols - 1; c++)
     if (cur.grid[r][c] === 2 && Math.hypot(c * T + T / 2 - x, r * T + T / 2 - y) < R + 8) { cur.grid[r][c] = 0; puff(c * T + T / 2, r * T + T / 2, PAL[floorN].rock, 6); }
@@ -763,6 +783,10 @@ function killEnemy(e) {
   puff(e.x, e.y, e.type === 'moth' ? '#9b8a74' : '#e8dcc2', e.type === 'boss' ? 40 : 10);
   if (e.type === 'blob') { for (let i = -1; i <= 1; i += 2) enemies.push(makeEnemy(e.elite ? 'blob' : 'blobling', e.x + i * 14, e.y)); }
   if (e.type === 'bomber') enemyBlast(e.x, e.y);
+  if (P.chain && e.type !== 'boss') {
+    enemies.filter(o => o !== e && o.hp > 0 && o.spawnT <= 0).sort((a, b) => Math.hypot(a.x - e.x, a.y - e.y) - Math.hypot(b.x - e.x, b.y - e.y)).slice(0, 2)
+      .forEach(o => { const a = Math.atan2(o.y - e.y, o.x - e.x); pendingTears.push({ x: e.x, y: e.y, vx: Math.cos(a) * 320, vy: Math.sin(a) * 320, r: 4, dmg: P.dmg * P.dmgMul * 0.6, life: 0.9, hits: new Set(), child: true }); });
+  }
   if (e.type === 'husk') { const rv = makeEnemy('runner', e.x, e.y); rv.spawnT = 1.6; rv.revive = 1.6; enemies.push(rv); return; } // melts, then rises again fast
   if (e.type === 'boss') {
     shake = 14; enemies.length = 0; eBullets.length = 0;
@@ -910,8 +934,9 @@ function fire(dx, dy) {
     const a = base + a0, cx = Math.cos(a), cy = Math.sin(a);
     const offs = P.double ? [-7, 7] : [0];
     for (const o of offs) {
+      const crit = P.crit && rnd() < P.crit, dmg = P.dmg * P.dmgMul * (crit ? 3 : 1);
       tears.push({ x: P.x + cx * 8 - cy * o, y: P.y - 6 + cy * 8 + cx * o, vx: cx * P.shotSpeed + P.vx * 0.25, vy: cy * P.shotSpeed + P.vy * 0.25,
-        r: P.tearSize, dmg: P.dmg * P.dmgMul, life: P.range, hits: new Set() });
+        r: P.tearSize + (crit ? 2 : 0), dmg, dmg0: dmg, r0: P.tearSize, crit, life: P.range, hits: new Set() });
     }
   }
   sfx('shoot');
@@ -930,12 +955,13 @@ function dropBomb() {
 }
 function explode(b) {
   sfx('boom'); shake = Math.max(shake, 10);
-  const R = P.blast;
+  const R = b.big ? P.blast * 1.9 : P.blast;
+  if (b.big) shake = Math.max(shake, 16);
   for (let i = 0; i < 26; i++) { const a = rnd() * TAU, s = 60 + rnd() * 200; particles.push({ x: b.x, y: b.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.5, max: 0.5, col: i % 2 ? '#ff9b3d' : '#ffe1a8', size: 3 + rnd() * 3, glow: true }); }
   particles.push({ x: b.x, y: b.y, vx: 0, vy: 0, life: 0.3, max: 0.3, col: '#fff', size: R, ring: true, glow: true });
   flashes.push({ x: b.x, y: b.y, r: R * 2.6, t: 0.35 });
-  for (const e of enemies) if (Math.hypot(e.x - b.x, e.y - b.y) < R + e.r) damageEnemy(e, 14, e.x - b.x, e.y - b.y);
-  if (Math.hypot(P.x - b.x, P.y - b.y) < R * 0.85) hurt(2);
+  for (const e of enemies) if (Math.hypot(e.x - b.x, e.y - b.y) < R + e.r) damageEnemy(e, b.big ? 35 : 14, e.x - b.x, e.y - b.y);
+  if (!P.blastProof && Math.hypot(P.x - b.x, P.y - b.y) < R * 0.85) hurt(2);
   for (let r = 1; r < cur.rows - 1; r++) for (let c = 1; c < cur.cols - 1; c++) {
     if (cur.grid[r][c] === 2 && Math.hypot(c * T + T / 2 - b.x, r * T + T / 2 - b.y) < R + 10) {
       cur.grid[r][c] = 0; puff(c * T + T / 2, r * T + T / 2, PAL[floorN].rock, 8);
@@ -970,8 +996,19 @@ function hurt(n) {
   if (P.inv > 0 || state !== 'play') return;
   if (P.sealUp) { P.sealUp = false; P.inv = 0.7; sfx('door'); puff(P.x, P.y, '#e0525a', 12); return; }
   n = diff === 'nightmare' ? P.hp : diff === 'hard' ? Math.max(n, 2) : n;
+  if (P.armor && diff !== 'nightmare' && n >= 2) n -= 1;
   P.hp -= n; P.inv = 1.0; shake = Math.max(shake, 8); sfx('hurt');
   puff(P.x, P.y, '#ffd9a0', 10);
+  if (P.static) {
+    for (const e of enemies) if (e.spawnT <= 0 && Math.hypot(e.x - P.x, e.y - P.y) < 95 + e.r) damageEnemy(e, 8, e.x - P.x, e.y - P.y);
+    eBullets = eBullets.filter(b => Math.hypot(b.x - P.x, b.y - P.y) > 95);
+    particles.push({ x: P.x, y: P.y, vx: 0, vy: 0, life: 0.3, max: 0.3, col: '#e0e8ff', size: 95, ring: true, glow: true });
+  }
+  if (P.hp <= 0 && P.lives > 0) {
+    P.lives--; P.hp = Math.min(2, P.maxHp); P.inv = 2; showBanner('여분의 심지', '불이 다시 켜졌습니다');
+    const idx = P.items.findIndex(it => it.id === 'spare'); if (idx >= 0) P.items.splice(idx, 1);
+    flashes.push({ x: P.x, y: P.y, r: 400, t: 0.5 }); return;
+  }
   if (P.hp <= 0) { P.hp = 0; die(); }
 }
 function puff(x, y, col, n) {
@@ -1052,6 +1089,22 @@ function update(dt) {
     }
   });
 
+  // fire trail
+  if (P.trail) {
+    P.trailT = (P.trailT || 0) - dt;
+    if (P.trailT <= 0 && Math.hypot(P.vx, P.vy) > 40) { fires.push({ x: P.x, y: P.y + 8, t: 1.6 }); P.trailT = 0.18; }
+  }
+  for (const f of fires) { f.t -= dt; for (const e of enemies) if (e.spawnT <= 0 && !e.fly && Math.hypot(e.x - f.x, e.y - f.y) < e.r + 12) { e.hp -= 7 * dt; e.hit = 0.04; } }
+  fires = fires.filter(f => f.t > 0);
+  // temporary candle ring (active)
+  if (P.tempOrbT > 0) {
+    P.tempOrbT -= dt;
+    for (let i = 0; i < 4; i++) {
+      const a = -P.orbA * 1.3 + i * TAU / 4, ox = P.x + Math.cos(a) * 52, oy = P.y + Math.sin(a) * 52;
+      for (const e of enemies) if (e.spawnT <= 0 && Math.hypot(e.x - ox, e.y - oy) < e.r + 9) { e.hp -= 18 * dt; e.hit = 0.05; }
+      eBullets = eBullets.filter(b => Math.hypot(b.x - ox, b.y - oy) > b.r + 9);
+    }
+  }
   // tears
   for (const t of tears) {
     if (P.homing) {
@@ -1063,10 +1116,19 @@ function update(dt) {
         const a = a0 + clamp(da, -dt * 5, dt * 5); t.vx = Math.cos(a) * sp; t.vy = Math.sin(a) * sp;
       }
     }
+    const px = t.x, py = t.y;
     t.x += t.vx * dt; t.y += t.vy * dt; t.life -= dt;
-    const [c, r] = tileAt(t.x, t.y);
-    const gv = tileVal(c, r);
-    if (gv === 1 || gv === 3 || (gv === 2 && !(P.spectral && !t.fam))) { t.life = 0; puff(t.x, t.y, '#ffb35c', 3); continue; }
+    if (P.grow && !t.fam && t.dmg0) { t.r = Math.min(t.r0 * 2.2, t.r + dt * 6); t.dmg += t.dmg0 * dt * 0.9; }
+    const blocks = (x, y) => { const v = tileVal(Math.floor(x / T), Math.floor(y / T)); return v === 1 || v === 3 || (v === 2 && !(P.spectral && !t.fam)); };
+    if (blocks(t.x, t.y)) {
+      if (P.bounce && !t.bounced && !t.fam) {
+        const hitX = blocks(t.x, py), hitY = blocks(px, t.y);
+        if (hitX || !hitY) t.vx = -t.vx;
+        if (hitY || !hitX) t.vy = -t.vy;
+        t.x = px; t.y = py; t.bounced = true; t.life += 0.15; puff(t.x, t.y, '#a8e0ff', 3); continue;
+      }
+      t.life = 0; puff(t.x, t.y, '#ffb35c', 3); continue;
+    }
     const before = t.hits.size;
     for (const e of enemies) {
       if (t.life <= 0) break;
@@ -1082,7 +1144,8 @@ function update(dt) {
   if (pendingTears.length) { tears.push(...pendingTears); pendingTears = []; }
 
   // enemies
-  for (const e of enemies) updateEnemy(e, dt);
+  if (freezeT > 0) freezeT -= dt;
+  if (freezeT <= 0) for (const e of enemies) updateEnemy(e, dt);
   // separation
   for (let i = 0; i < enemies.length; i++) for (let j = i + 1; j < enemies.length; j++) {
     const a = enemies[i], b = enemies[j]; if (a.type === 'boss' || b.type === 'boss') continue;
@@ -1099,7 +1162,7 @@ function update(dt) {
 
   // enemy bullets
   for (const b of eBullets) {
-    b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
+    if (freezeT <= 0) { b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt; }
     const [c, r] = tileAt(b.x, b.y);
     const gv = tileVal(c, r);
     if (gv !== 0) { b.life = 0; continue; }
@@ -1121,17 +1184,18 @@ function update(dt) {
   // room clear
   if (!cur.cleared && enemies.length === 0 && cur.type !== 'boss') {
     cur.cleared = true; sfx('door'); chargeUp();
+    if (P.regen && P.hp < P.maxHp) { P.hp++; puff(P.x, P.y - 10, '#ffb3a0', 8); }
     if (cur.kind === 'mini') { cur.peds.push({ x: W / 2, y: RH / 2, item: drawItem(rnd() < 0.3), taken: false }); showBanner('미니 보스 처치', '보상 아이템 하나가 나타났어요'); }
     else if (rnd() < Math.min(0.8, 0.35 * (1 + P.luck))) { const [cx, cy] = cellCenter(cur, cur.cells[0]); dropAt(cx, cy, true); }
   }
-  if (!cur.cleared && cur.type === 'boss' && enemies.length === 0) { cur.cleared = true; sfx('door'); chargeUp(); }
+  if (!cur.cleared && cur.type === 'boss' && enemies.length === 0) { cur.cleared = true; sfx('door'); chargeUp(); if (P.regen && P.hp < P.maxHp) P.hp++; }
 
   // pickups
   for (const pk of cur.pickups) {
     pk.t += dt;
     if (Math.hypot(pk.x - P.x, pk.y - P.y) < P.r + 10) {
       if (pk.type === 'heart') { if (P.hp >= P.maxHp) continue; P.hp = Math.min(P.maxHp, P.hp + (pk.v || 2)); }
-      else if (pk.type === 'coin') P.coins = Math.min(99, P.coins + (pk.v || 1));
+      else if (pk.type === 'coin') P.coins = Math.min(99, P.coins + (pk.v || 1) + (P.coinPlus || 0));
       else P.bombs++;
       pk.got = true; sfx('pick');
     }
@@ -1512,7 +1576,7 @@ function drawGlowLayer(c) {
   for (let i = 0; i < P.orbit; i++) { const a = P.orbA + i * TAU / P.orbit; drawFlame(c, P.x + Math.cos(a) * 36, P.y + Math.sin(a) * 36, 6, gameT + i, '#ff7a2a', '#ffe0a0'); }
   for (const t of tears) {
     c.fillStyle = 'rgba(255,140,40,.35)'; c.beginPath(); c.arc(t.x, t.y, t.r * 2, 0, TAU); c.fill();
-    c.fillStyle = '#ffb35c'; c.beginPath(); c.arc(t.x, t.y, t.r, 0, TAU); c.fill();
+    c.fillStyle = t.crit ? '#ffe9c0' : '#ffb35c'; c.beginPath(); c.arc(t.x, t.y, t.r, 0, TAU); c.fill();
     c.fillStyle = '#fff4d8'; c.beginPath(); c.arc(t.x, t.y, t.r * 0.45, 0, TAU); c.fill();
   }
   for (const b of eBullets) {
@@ -1541,6 +1605,10 @@ function drawGlowLayer(c) {
     }
     if (e.elite) c.restore();
   }
+  for (const f of fires) { const a = Math.min(1, f.t / 0.6); drawFlame(c, f.x, f.y, 5 * a + 1, gameT + f.x, `rgba(255,122,42,${0.8 * a})`, `rgba(255,230,160,${a})`); }
+  if (P.tempOrbT > 0) for (let i = 0; i < 4; i++) { const a = -P.orbA * 1.3 + i * TAU / 4; drawFlame(c, P.x + Math.cos(a) * 52, P.y + Math.sin(a) * 52, 7, gameT + i, '#ff9b3d', '#fff0c0'); }
+  if (P.seer) { c.strokeStyle = 'rgba(198,255,122,.35)'; c.lineWidth = 1.5; for (const e of enemies) if (e.spawnT <= 0) { c.beginPath(); c.arc(e.x, e.y, e.r + 4, 0, TAU); c.stroke(); } }
+  if (freezeT > 0) { c.fillStyle = `rgba(150,180,255,${0.08 + 0.04 * Math.sin(gameT * 8)})`; c.fillRect(cam.x, cam.y, W, RH); }
   for (const b of bombs) { if (Math.floor(b.t * (b.t < 0.5 ? 16 : 6)) % 2) { c.fillStyle = '#ff6a3d'; c.beginPath(); c.arc(b.x + 6, b.y - 12, 3, 0, TAU); c.fill(); } }
   for (const p of particles) if (p.glow) {
     const a = p.life / p.max; c.globalAlpha = a;
@@ -1711,7 +1779,7 @@ function render() {
     else if (p.type === 'heart') drawDrop(ctx, p.x, y, 7, '#ff9b3d', '#ffd9a0');
     else { ctx.fillStyle = '#3a3040'; ctx.beginPath(); ctx.arc(p.x, y, 7, 0, TAU); ctx.fill(); ctx.fillStyle = '#d8c8a6'; ctx.fillRect(p.x - 1, y - 11, 2, 5); }
   }
-  for (const b of bombs) { ctx.fillStyle = '#3a3040'; const s = 1 + (1.4 - b.t) * 0.12; ctx.beginPath(); ctx.arc(b.x, b.y, 10 * s, 0, TAU); ctx.fill(); ctx.fillStyle = '#d8c8a6'; ctx.fillRect(b.x + 4, b.y - 14, 2, 6); }
+  for (const b of bombs) { ctx.fillStyle = b.big ? '#5a2a20' : '#3a3040'; const s = (b.big ? 1.7 : 1) + (1.4 - b.t) * 0.12; ctx.beginPath(); ctx.arc(b.x, b.y, 10 * s, 0, TAU); ctx.fill(); ctx.fillStyle = '#d8c8a6'; ctx.fillRect(b.x + 4, b.y - 14, 2, 6); }
   const order = enemies.slice().sort((a, b) => a.y - b.y);
   for (const e of order) if (e.fly !== true) drawEnemy(ctx, e);
   drawPlayer(ctx);
@@ -1829,7 +1897,7 @@ function frame(now) {
 }
 setDiff(diff);
 newRun(); bannerEl.classList.remove('show'); bannerT = 0;
-window.__wick = { get state() { return state; }, get P() { return P; }, get cur() { return cur; }, get enemies() { return enemies; }, rooms: () => rooms, setMini: v => { MINI_CHANCE = v; }, nextFloor: () => { floorN++; startFloor(); }, regen: () => startFloor(), get floor() { return floorN; }, give: i => { ITEMS[i].apply(P); P.items.push(ITEMS[i]); }, enterRoom: (r, d) => enterRoom(r, d) };
+window.__wick = { get state() { return state; }, get P() { return P; }, get cur() { return cur; }, get enemies() { return enemies; }, rooms: () => rooms, actives: () => ACTIVES, setMini: v => { MINI_CHANCE = v; }, nextFloor: () => { floorN++; startFloor(); }, regen: () => startFloor(), get floor() { return floorN; }, give: i => { ITEMS[i].apply(P); P.items.push(ITEMS[i]); }, enterRoom: (r, d) => enterRoom(r, d) };
 requestAnimationFrame(frame);
 })();
 </script>
